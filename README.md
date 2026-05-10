@@ -5,14 +5,20 @@ NASA POWER 데이터를 활용하여 시간에 따른 복사량 변화를 반영
 
 ---
 
-## 📦 Environment
+<<<<<<< HEAD
+=======
+## Environment
+>>>>>>> c03f94e5f7e8638713fecaa3ad1884b421a9d621
 
 - Python 3.11
 - Conda environment
 
 ---
 
-## ⚙️ Installation
+<<<<<<< HEAD
+=======
+## Installation
+>>>>>>> c03f94e5f7e8638713fecaa3ad1884b421a9d621
 
 ### 1. Conda 환경 생성
 
@@ -25,20 +31,29 @@ pip install -r requirements.txt
 
 ---
 
-## ▶️ Run
+<<<<<<< HEAD
+=======
+## Run
+>>>>>>> c03f94e5f7e8638713fecaa3ad1884b421a9d621
 
 python main.py  
 
 ---
 
-## 🎮 Controls
+<<<<<<< HEAD
+=======
+## Controls
+>>>>>>> c03f94e5f7e8638713fecaa3ad1884b421a9d621
 
 - 마우스 드래그: 카메라 회전  
 - 마우스 휠: 줌  
 
 ---
 
-## 📁 Project Structure
+<<<<<<< HEAD
+=======
+## Project Structure
+>>>>>>> c03f94e5f7e8638713fecaa3ad1884b421a9d621
 
 solar_radiation_sim/  
 ├─ main.py  
@@ -56,7 +71,10 @@ solar_radiation_sim/
 
 ---
 
-## 📊 Data
+<<<<<<< HEAD
+=======
+## Data
+>>>>>>> c03f94e5f7e8638713fecaa3ad1884b421a9d621
 
 NASA POWER API의 태양 복사량 데이터를 사용합니다.
 
@@ -65,6 +83,9 @@ NASA POWER API의 태양 복사량 데이터를 사용합니다.
 
 ---
 
-## ⚠️ Note
+<<<<<<< HEAD
+=======
+## Note
+>>>>>>> c03f94e5f7e8638713fecaa3ad1884b421a9d621
 
 - shaders/ 및 data/ 폴더가 동일 경로에 있어야 정상 실행됩니다.
