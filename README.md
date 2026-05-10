@@ -5,14 +5,14 @@ NASA POWER 데이터를 활용하여 시간에 따른 복사량 변화를 반영
 
 ---
 
-## 📦 Environment
+## Environment
 
 - Python 3.11
 - Conda environment
 
 ---
 
-## ⚙️ Installation
+## Installation
 
 ### 1. Conda 환경 생성
 
@@ -25,20 +25,20 @@ pip install -r requirements.txt
 
 ---
 
-## ▶️ Run
+## Run
 
 python main.py  
 
 ---
 
-## 🎮 Controls
+## Controls
 
 - 마우스 드래그: 카메라 회전  
 - 마우스 휠: 줌  
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 solar_radiation_sim/  
 ├─ main.py  
@@ -56,7 +56,7 @@ solar_radiation_sim/
 
 ---
 
-## 📊 Data
+## Data
 
 NASA POWER API의 태양 복사량 데이터를 사용합니다.
 
@@ -65,6 +65,6 @@ NASA POWER API의 태양 복사량 데이터를 사용합니다.
 
 ---
 
-## ⚠️ Note
+## Note
 
 - shaders/ 및 data/ 폴더가 동일 경로에 있어야 정상 실행됩니다.
