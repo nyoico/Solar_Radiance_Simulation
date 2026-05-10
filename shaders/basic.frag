@@ -2,11 +2,17 @@
 
 out vec4 FragColor;
 
-in float vIntensity;
-in vec3 vColor;
+in vec2 TexCoord;
+
+uniform vec3 objectColor;
+uniform sampler2D texture1;
+uniform int useTexture;
+uniform int useVertexColor;
 
 void main()
 {
-    float brightness = clamp(vIntensity * 120.0, 0.2, 1.0);
-    FragColor = vec4(vColor * brightness, 1.0);
+    if (useTexture == 1)
+        FragColor = texture(texture1, TexCoord);
+    else
+        FragColor = vec4(objectColor, 1.0);
 }

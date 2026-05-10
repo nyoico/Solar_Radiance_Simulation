@@ -11,11 +11,11 @@ class TextRenderer:
         vertices = np.array([
             # x, y,    u, v
             -0.98,  0.95,  0.0, 0.0,
-            -0.35,  0.95,  1.0, 0.0,
-            -0.35,  0.65,  1.0, 1.0,
+            -0.38,  0.95,  1.0, 0.0,
+            -0.38,  0.65,  1.0, 1.0,
 
             -0.98,  0.95,  0.0, 0.0,
-            -0.35,  0.65,  1.0, 1.0,
+            -0.38,  0.65,  1.0, 1.0,
             -0.98,  0.65,  0.0, 1.0,
         ], dtype=np.float32)
 
@@ -40,15 +40,16 @@ class TextRenderer:
         glBindVertexArray(0)
 
     def create_text_texture(self, text):
-        img = Image.new("RGBA", (512, 256), (0, 0, 0, 160))
+        img = Image.new("RGBA", (512, 256), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
         try:
+            #font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Helvetica.ttc", 32)
             font = ImageFont.truetype("arial.ttf", 32)
         except:
             font = ImageFont.load_default()
 
-        draw.text((20, 20), text, font=font, fill=(255, 255, 255, 255))
+        draw.text((30, 30), text, font=font, fill=(255, 255, 255, 255))
 
         #img = img.transpose(Image.FLIP_TOP_BOTTOM)
         img_data = np.array(img, dtype=np.uint8)

@@ -7,6 +7,7 @@ SUN_RADIUS = 10.9
 EARTH_RADIUS = 1.0
 INTERACTION_RADIUS = 3.0
 
+
 class ParticleSystem:
     def __init__(self, count=1200):
         self.count = count
@@ -22,18 +23,26 @@ class ParticleSystem:
     def set_emission_scale(self, scale):
         self.emission_scale = scale
 
-    def random_point_on_sun(self):
-        direction = np.random.normal(size=3)
-        direction = direction / np.linalg.norm(direction)
-        return SUN_POS + direction * SUN_RADIUS
+    def random_point_on_sun_toward_earth(self):
+        # 태양 중심에서 지구 방향
+        earth_dir = EARTH_POS - SUN_POS
+        earth_dir = earth_dir / np.linalg.norm(earth_dir)
+
+        # 지구 방향 반구에서만 파티클 생성
+        while True:
+            direction = np.random.normal(size=3)
+            direction = direction / np.linalg.norm(direction)
+
+            if np.dot(direction, earth_dir) > 0.2:
+                return SUN_POS + direction * SUN_RADIUS
 
     def reset_particle(self, i):
-        start = self.random_point_on_sun()
+        start = self.random_point_on_sun_toward_earth()
 
         direction_to_earth = EARTH_POS - start
         direction_to_earth = direction_to_earth / np.linalg.norm(direction_to_earth)
 
-        noise = np.random.normal(scale=0.025, size=3)
+        noise = np.random.normal(scale=0.04, size=3)
         direction = direction_to_earth + noise
         direction = direction / np.linalg.norm(direction)
 
@@ -60,20 +69,17 @@ class ParticleSystem:
         incoming = incoming / np.linalg.norm(incoming)
 
         if rand < 0.5:
-            # absorbed
             self.states[i] = 1
             self.velocities[i] = np.array([0.0, 0.0, 0.0], dtype=np.float32)
             self.colors[i] = np.array([1.0, 0.25, 0.15], dtype=np.float32)
 
         elif rand < 0.8:
-            # reflected
             self.states[i] = 2
             reflected = incoming - 2.0 * np.dot(incoming, normal) * normal
             self.velocities[i] = reflected * np.random.uniform(5.0, 9.0)
             self.colors[i] = np.array([0.4, 0.9, 1.0], dtype=np.float32)
 
         else:
-            # scattered
             self.states[i] = 3
             scatter = normal + np.random.normal(scale=0.8, size=3)
             scatter = scatter / np.linalg.norm(scatter)
@@ -86,11 +92,10 @@ class ParticleSystem:
         self.positions += self.velocities * dt
         self.life += dt
 
+        # 너무 어두워지지 않게 고정
+        self.intensities = np.full(self.count, self.emission_scale, dtype=np.float32)
+
         distances_from_sun = np.linalg.norm(self.positions - SUN_POS, axis=1)
-
-        self.intensities = self.emission_scale / np.maximum(distances_from_sun * distances_from_sun, 1.0)
-        self.intensities[self.states != 0] = self.emission_scale
-
         distances_from_earth = np.linalg.norm(self.positions - EARTH_POS, axis=1)
 
         moving = self.states == 0

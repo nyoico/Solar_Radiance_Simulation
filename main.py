@@ -8,6 +8,9 @@ from text_renderer import TextRenderer
 
 import sys
 import os
+import ctypes
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = None
 
 def resource_path(relative_path):
     try:
@@ -133,8 +136,13 @@ def create_sphere_vao(radius):
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.nbytes, indices, GL_STATIC_DRAW)
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * vertices.itemsize, None)
+    stride = 5 * vertices.itemsize
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, None)
     glEnableVertexAttribArray(0)
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, ctypes.c_void_p(3 * vertices.itemsize))
+    glEnableVertexAttribArray(1)
 
     glBindVertexArray(0)
 
@@ -202,6 +210,56 @@ def set_int(shader, name, value):
     location = glGetUniformLocation(shader, name)
     glUniform1i(location, value)
 
+def set_float(shader, name, value):
+    location = glGetUniformLocation(shader, name)
+    glUniform1f(location, value)
+
+def load_texture(path):
+    image = Image.open(resource_path(path))
+    image = image.transpose(Image.FLIP_TOP_BOTTOM)
+    image = image.convert("RGB")
+
+    max_texture_size = glGetIntegerv(GL_MAX_TEXTURE_SIZE)
+    width, height = image.size
+
+    if width > max_texture_size or height > max_texture_size:
+        scale = min(max_texture_size / width, max_texture_size / height)
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+
+        image = image.resize((new_width, new_height), Image.LANCZOS)
+        width, height = image.size
+
+        print(f"Texture resized: {path} -> {width}x{height}")
+
+    img_data = image.tobytes()
+
+    texture = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture)
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGB,
+        width,
+        height,
+        0,
+        GL_RGB,
+        GL_UNSIGNED_BYTE,
+        img_data
+    )
+
+    glGenerateMipmap(GL_TEXTURE_2D)
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+
+    return texture
+
 def mouse_button_callback(window, button, action, mods):
     global mouse_pressed
 
@@ -239,6 +297,11 @@ def scroll_callback(window, xoffset, yoffset):
 def main():
     if not glfw.init():
         raise Exception("GLFW init failed")
+    
+    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+    glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, GL_TRUE)
 
     window = glfw.create_window(WIDTH, HEIGHT, "Solar Radiation Simulation", None, None)
 
@@ -253,6 +316,7 @@ def main():
     glfw.set_scroll_callback(window, scroll_callback)
 
     glEnable(GL_DEPTH_TEST)
+    glEnable(GL_PROGRAM_POINT_SIZE)
 
     shader = create_shader_program(
         "shaders/basic.vert",
@@ -264,11 +328,23 @@ def main():
         "shaders/text.frag"
     )
 
-    
+    particle_shader = create_shader_program(
+        "shaders/particle.vert",
+        "shaders/particle.frag"
+    )
+
+    sun_halo_shader = create_shader_program(
+        "shaders/sun_halo.vert",
+        "shaders/sun_halo.frag"
+    )
 
     text_renderer = TextRenderer(text_shader)
 
     sphere_vao, sphere_index_count = create_sphere_vao(radius=1.0)
+
+    earth_texture = load_texture("textures/earth.jpg")
+    sun_texture = load_texture("textures/sun.jpg")
+    space_texture = load_texture("textures/space.jpg")
 
     particles = ParticleSystem(count=1200)
     particle_vao, particle_vbo, particle_intensity_vbo, particle_color_vbo = create_particle_vao(particles.count)
@@ -284,7 +360,17 @@ def main():
 
     last_time = glfw.get_time()
 
-    projection = perspective(45.0, WIDTH / HEIGHT, 0.1, 500.0)
+    #projection = perspective(45.0, WIDTH / HEIGHT, 0.1, 500.0)
+    fb_width, fb_height = glfw.get_framebuffer_size(window)
+
+    glViewport(0, 0, fb_width, fb_height)
+
+    projection = perspective(
+        45.0,
+        fb_width / fb_height,
+        0.1,
+        500.0
+    )
 
     date = "----"
     raw_value = 0.0
@@ -316,8 +402,8 @@ def main():
             text = (
                 "NASA POWER DATA\n"
                 f"Date: {date}\n"
-                f"Irradiance: {raw_value:.2f}\n"
-                f"Scale: {emission_scale:.2f}"
+                f"Irradiance: {raw_value: }\n"
+                f"Scale: {emission_scale: }"
             )
 
             text_renderer.create_text_texture(text)
@@ -347,23 +433,91 @@ def main():
         set_mat4(shader, "view", view)
         set_mat4(shader, "projection", projection)
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
 
         glBindVertexArray(sphere_vao)
 
         set_int(shader, "useVertexColor", 0)
 
+        # Space Background
+        glDepthMask(GL_FALSE)
+
+        set_int(shader, "useTexture", 1)
+
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, space_texture)
+        set_int(shader, "texture1", 0)
+
+        space_model = translate(
+            eye[0],
+            eye[1],
+            eye[2]
+        ) @ scale(250.0)
+
+        set_mat4(shader, "model", space_model)
+
+        glDisable(GL_CULL_FACE)
+
+        glDrawElements(
+            GL_TRIANGLES,
+            sphere_index_count,
+            GL_UNSIGNED_INT,
+            None
+        )
+
+        glDepthMask(GL_TRUE)
+
+
         # Sun
+        set_int(shader, "useTexture", 1)
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, sun_texture)
+        set_int(shader, "texture1", 0)
+
         sun_model = translate(0.0, 0.0, 0.0) @ scale(10.9)
         set_mat4(shader, "model", sun_model)
-        set_vec3(shader, "objectColor", (1.0, 0.7, 0.1))
         glDrawElements(GL_TRIANGLES, sphere_index_count, GL_UNSIGNED_INT, None)
 
+        # Sun halo
+        glUseProgram(sun_halo_shader)
+
+        halo_pulse = 15.2 + 0.28 * np.sin(current_time * 1.6)
+
+        set_mat4(sun_halo_shader, "view", view)
+        set_mat4(sun_halo_shader, "projection", projection)
+        set_float(sun_halo_shader, "uTime", current_time)
+        set_vec3(sun_halo_shader, "uCameraPos", eye)
+
+        halo_model = translate(0.0, 0.0, 0.0) @ scale(halo_pulse)
+        set_mat4(sun_halo_shader, "model", halo_model)
+
+        glEnable(GL_BLEND)
+        #glBlendFunc(GL_SRC_ALPHA, GL_ONE)
+        glBlendFunc(GL_ONE, GL_ONE)
+        glDepthMask(GL_FALSE)
+
+        glBindVertexArray(sphere_vao)
+        glDrawElements(GL_TRIANGLES, sphere_index_count, GL_UNSIGNED_INT, None)
+
+        glBindVertexArray(0)
+
+        glDepthMask(GL_TRUE)
+        glDisable(GL_BLEND)
+
+        glBindVertexArray(sphere_vao)
+        glUseProgram(shader)
         # Earth
+        set_int(shader, "useTexture", 1)
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, earth_texture)
+        set_int(shader, "texture1", 0)
+
         earth_model = translate(40.0, 0.0, 0.0) @ scale(1.0)
         set_mat4(shader, "model", earth_model)
-        set_vec3(shader, "objectColor", (0.2, 0.6, 1.0))
         glDrawElements(GL_TRIANGLES, sphere_index_count, GL_UNSIGNED_INT, None)
+
+        set_int(shader, "useTexture", 0)
+        set_int(shader, "useVertexColor", 1)
 
         # Particles
         particle_positions = particles.get_positions()
@@ -380,20 +534,48 @@ def main():
         glBufferSubData(GL_ARRAY_BUFFER, 0, particle_colors.nbytes, particle_colors)
 
         particle_model = np.identity(4, dtype=np.float32)
-        set_mat4(shader, "model", particle_model)
-        set_int(shader, "useVertexColor", 1)
-        
+
+        glUseProgram(particle_shader)
+        set_mat4(particle_shader, "model", particle_model)
+        set_mat4(particle_shader, "view", view)
+        set_mat4(particle_shader, "projection", projection)
+
+        glDisable(GL_DEPTH_TEST)
+
+        glEnable(GL_PROGRAM_POINT_SIZE)
+
+        try:
+            glEnable(GL_POINT_SPRITE)
+        except:
+            pass
+
+        glDepthMask(GL_FALSE)
+
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_ONE, GL_ONE)
+
+        glBindVertexArray(particle_vao)
+        glDrawArrays(GL_POINTS, 0, particles.count)
+        glBindVertexArray(0)
+
+        glDisable(GL_BLEND)
+        glDepthMask(GL_TRUE)
+        glEnable(GL_DEPTH_TEST)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE)
+
+        glDepthMask(GL_FALSE)
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        glPointSize(1.25)
 
         glBindVertexArray(particle_vao)
         glDrawArrays(GL_POINTS, 0, particles.count)
 
-
         glBindVertexArray(0)
 
-        glLineWidth(2.0)
+        glDepthMask(GL_TRUE)
+        glDisable(GL_BLEND)
+
+        glLineWidth(1.0)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         text_renderer.render()
 
