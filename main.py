@@ -214,13 +214,19 @@ def set_float(shader, name, value):
     location = glGetUniformLocation(shader, name)
     glUniform1f(location, value)
 
-def load_texture(path):
+def load_texture(path, flip_vertical=False):
     image = Image.open(resource_path(path))
     image = image.transpose(Image.FLIP_TOP_BOTTOM)
+    
+    if flip_vertical:
+        image = image.transpose(Image.FLIP_TOP_BOTTOM)
+        
     image = image.convert("RGB")
 
     max_texture_size = glGetIntegerv(GL_MAX_TEXTURE_SIZE)
     width, height = image.size
+    
+    
 
     if width > max_texture_size or height > max_texture_size:
         scale = min(max_texture_size / width, max_texture_size / height)
@@ -342,7 +348,7 @@ def main():
 
     sphere_vao, sphere_index_count = create_sphere_vao(radius=1.0)
 
-    earth_texture = load_texture("textures/earth.jpg")
+    earth_texture = load_texture("textures/earth.jpg", flip_vertical=True)
     sun_texture = load_texture("textures/sun_nasa.jpg")
     space_texture = load_texture("textures/8k_space.jpg")
 
