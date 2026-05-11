@@ -44,8 +44,8 @@ class TextRenderer:
         draw = ImageDraw.Draw(img)
 
         try:
-            #font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Helvetica.ttc", 32)
-            font = ImageFont.truetype("arial.ttf", 32)
+            font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Helvetica.ttc", 32)
+            #font = ImageFont.truetype("arial.ttf", 32)
         except:
             font = ImageFont.load_default()
 

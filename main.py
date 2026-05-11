@@ -343,8 +343,8 @@ def main():
     sphere_vao, sphere_index_count = create_sphere_vao(radius=1.0)
 
     earth_texture = load_texture("textures/earth.jpg")
-    sun_texture = load_texture("textures/sun.jpg")
-    space_texture = load_texture("textures/space.jpg")
+    sun_texture = load_texture("textures/sun_nasa.jpg")
+    space_texture = load_texture("textures/8k_space.jpg")
 
     particles = ParticleSystem(count=1200)
     particle_vao, particle_vbo, particle_intensity_vbo, particle_color_vbo = create_particle_vao(particles.count)
